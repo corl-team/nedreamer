@@ -1,0 +1,253 @@
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NE-Dreamer: Next Embedding Prediction Makes World Models Stronger</title>
+    <meta name="description" content="NE-Dreamer is a decoder-free MBRL agent that leverages a temporal transformer to predict next-step encoder embeddings, improving long-horizon performance under partial observability.">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <meta name="robots" content="all">
+    <meta content="en_EN" property="og:locale">
+    <meta content="website" property="og:type">
+    <meta content="NE-Dreamer" property="og:title">
+    <meta content="Next Embedding Prediction Makes World Models Stronger" property="og:description">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:description" content="NE-Dreamer: Next Embedding Prediction Makes World Models Stronger">
+
+    <link rel="stylesheet" type="text/css" media="all" href="assets/stylesheets/main_free.css" />
+    <link rel="stylesheet" type="text/css" media="all" href="clarity/clarity.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/foundation.min.css">
+    <link href="assets/fontawesome-free-6.6.0-web/css/all.min.css" rel="stylesheet">
+    <script src="assets/scripts/navbar.js"></script>
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+            "HTML-CSS": {
+              scale: 95,
+              fonts: ["Gyre-Pagella"],
+              imageFont: null,
+              undefinedFamily: "'Arial Unicode MS', cmbright"
+            },
+            tex2jax: {
+                inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+                processEscapes: true
+              }
+          });
+    </script>
+    <script type="text/javascript"
+    src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+    </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</head>
+
+<body>
+    <!-- Title Page -->
+    <div class="container blog" id="first-content" style="background-color: #D8DEE4;">
+        <div class="blog-title no-cover">
+            <div class="blog-intro">
+                <div>
+                    <h1 class="title">Next Embedding Prediction Makes World Models Stronger</h1>
+                    <p class="author">
+                        George Bredis, Nikita Balagansky, Daniil Gavrilov, Ruslan Rakhimov
+                    </p>
+                    <p class="author" style="padding-top: 0px;">
+                        T-Tech
+                    </p>
+                    <p class="abstract">
+                        We introduce NE-Dreamer, a decoder-free MBRL agent that leverages a temporal transformer to predict next-step encoder embeddings from latent state sequences, directly optimizing temporal predictive alignment in representation space. On the DeepMind Control Suite, NE-Dreamer matches or exceeds DreamerV3 and leading decoder-free agents. On a challenging subset of DMLab tasks involving memory and spatial reasoning, NE-Dreamer achieves substantial gains.
+                    </p>
+                    <div class="info">
+                        <div>
+                            <a href="https://arxiv.org" class="button icon" style="background-color: rgba(255, 255, 255, 0.2)"> Paper <i class="fa-solid fa-book-open"></i></a> &nbsp;&nbsp;
+                            <a href="https://github.com" class="button icon" style="background-color: rgba(255, 255, 255, 0.2)">Code <i class="fa-solid fa-code"></i></a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info">
+                    <p></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Imagination Comparison (Teaser) -->
+    <div class="container blog large gray first" id="imagination-teaser">
+        <video loop playsinline muted autoplay controls style="max-width: 900px; margin: 0 auto; display: block;">
+            <source src="static/videos/nedreamer_vs_dreamer.mp4" type="video/mp4">
+        </video>
+        <p class="caption" style="max-width: 900px; margin: 0 auto;">
+            <b>NE-Dreamer vs DreamerV3 vs R2-Dreamer imagination.</b> NE-Dreamer produces more temporally consistent imagined rollouts compared to DreamerV3 and R2-Dreamer.
+        </p>
+    </div>
+
+    <!-- Teaser: DMLab Results -->
+    <div class="container blog main" id="blog-main">
+        <h1>Overview</h1>
+        <p class="text">
+            Model-based reinforcement learning (MBRL) from high-dimensional observations hinges on learning a compact latent state that supports long-horizon prediction and control. Under partial observability, the agent must integrate information over time rather than react to a single frame. Existing decoder-free methods mainly enforce <em>instantaneous</em> agreement at the same timestep. Without an explicit temporal constraint, training can drift or collapse &mdash; failure modes that surface in memory- and navigation-heavy tasks.
+        </p>
+        <p class="text">
+            NE-Dreamer replaces pixel-level reconstruction with a simple yet powerful objective: at each timestep, a <b>temporal transformer</b> predicts the <em>next</em> encoder embedding in the sequence, and this prediction is aligned to the actual next-step embedding using a redundancy-reduction metric (Barlow Twins). By shifting the focus from same-timestep matching to <b>next-step prediction</b>, NE-Dreamer learns temporally coherent latent states without the need for pixel reconstruction, data augmentation, or auxiliary regularization.
+        </p>
+    </div>
+
+    <!-- Method Overview Figure -->
+    <div class="container blog large gray">
+        <img src="static/figures/method.jpg" style="max-width: 900px; margin: 0 auto;">
+        <p class="caption">
+            <b>Method overview.</b> NE-Dreamer keeps Dreamer's RSSM dynamics and imagination-based actor&ndash;critic, but replaces same-step pixel reconstruction with <em>next-embedding prediction</em> using a causal temporal transformer, improving long-horizon performance under partial observability.
+        </p>
+    </div>
+
+    <!-- Method Details -->
+    <div class="container blog main">
+        <h1>Method</h1>
+
+        <h2>Latent World Model (RSSM)</h2>
+        <p class="text">
+            We build on a recurrent state-space model (RSSM) with a deterministic recurrent state $h_t$ and a stochastic latent $z_t$. An encoder maps observations to embeddings $e_t = f_{\mathrm{enc}}(x_t)$. Given the previous latent state and action, the RSSM updates:
+        </p>
+        <p class="text" style="text-align: center;">
+            $h_t = f_{\mathrm{rec}}(h_{t-1}, z_{t-1}, a_{t-1})$
+        </p>
+        <p class="text">
+            The world model is trained with reward and continuation likelihoods, a prior&ndash;posterior KL regularizer, and the proposed next-embedding loss:
+        </p>
+        <p class="text" style="text-align: center;">
+            $\mathcal{L}_{\mathrm{wm}} = \mathcal{L}_{\mathrm{rew}} + \mathcal{L}_{\mathrm{cont}} + \beta_{\mathrm{kl}} \mathcal{L}_{\mathrm{kl}} + \beta_{\mathrm{ne}} \mathcal{L}_{\mathrm{NE}}$
+        </p>
+
+        <h2>Next-Embedding Predictive Alignment</h2>
+        <p class="text">
+            A causal temporal transformer $T_\theta$ uses only information available up to time $t$ to produce a next-step embedding prediction:
+        </p>
+        <p class="text" style="text-align: center;">
+            $\hat{e}_{t+1} = T_\theta(h_{\le t}, z_{\le t}, a_{\le t})$
+        </p>
+        <p class="text">
+            The target is the stop-gradient next-step encoder embedding $e^\star_{t+1} = \mathrm{sg}(f_{\mathrm{enc}}(x_{t+1}))$. The alignment loss uses Barlow Twins:
+        </p>
+        <p class="text" style="text-align: center;">
+            $\mathcal{L}_{\mathrm{NE}} = \sum_i (1 - C_{ii})^2 + \lambda_{\mathrm{BT}} \sum_{i \neq j} C_{ij}^2$
+        </p>
+        <p class="text">
+            This encourages invariance (large diagonal correlations) while discouraging redundancy (small off-diagonal correlations), applied to <em>next-step</em> prediction rather than same-timestep matching.
+        </p>
+    </div>
+
+    <!-- DMLab Teaser -->
+    <div class="container blog main">
+        <h1>Results</h1>
+        <h2>DMLab Rooms: Long-Horizon Memory and Navigation</h2>
+        <p class="text">
+            The DMLab Rooms benchmark directly targets the core challenge for model-based RL agents: reasoning over long temporal horizons in environments with sparse rewards and high partial observability. Under matched compute and model capacity (50M environment steps; 5 seeds; 12M parameters), NE-Dreamer outperforms strong decoder-based (DreamerV3) and decoder-free world-model baselines.
+        </p>
+    </div>
+
+    <div class="container blog large gray">
+        <img src="static/figures/dmlab_combined.png" style="max-width: 480px; margin: 0 auto;">
+        <p class="caption" style="max-width: 480px; margin: 0 auto;">
+            <b>DMLab Benchmark Summary.</b> Under matched compute and model capacity (50M environment steps; 5 seeds; 12M parameters), NE-Dreamer outperforms strong decoder-based (DreamerV3) and decoder-free world-model baselines (R2-Dreamer, DreamerPro) on the DMLab Rooms memory/navigation tasks.
+        </p>
+    </div>
+
+    <div class="container blog extra-large gray">
+        <img src="static/figures/dmlab_tasks_comparison.png">
+        <p class="caption">
+            <b>DMLab Rooms: improved long-horizon memory/navigation.</b> NE-Dreamer outperforms strong decoder-based (DreamerV3) and decoder-free world-model baselines (R2-Dreamer, DreamerPro) on four Rooms tasks. The largest gains occur when success depends on maintaining state over long horizons rather than reacting to short-lived visual cues.
+        </p>
+    </div>
+
+    <!-- DMC Results -->
+    <div class="container blog main">
+        <h2>DMC: No Regression Without Reconstruction</h2>
+        <p class="text">
+            On the DeepMind Control Suite, NE-Dreamer matches DreamerV3 and competitive decoder-free baselines, confirming that replacing reconstruction with next-embedding prediction improves the hard regime (DMLab) <em>without</em> sacrificing standard continuous-control performance.
+        </p>
+    </div>
+
+    <div class="container blog extra-large gray">
+        <img src="static/figures/dmc_comparison_new_aggregation.png">
+        <p class="caption">
+            <b>DMC: removing reconstruction does not hurt standard control.</b> On near-saturated pixel-based continuous-control benchmarks, NE-Dreamer matches or slightly exceeds strong decoder-based (DreamerV3) and decoder-free world-model baselines under a unified protocol (1M environment steps; 5 seeds; 12M parameters).
+        </p>
+    </div>
+
+    <!-- Analysis -->
+    <div class="container blog main">
+        <h1>Analysis</h1>
+
+    <!-- Ablations -->
+        <h2>Ablations: Isolating the Mechanism</h2>
+        <p class="text">
+            We systematically ablate three architectural and objective choices:
+        </p>
+        <ul>
+            <li>
+                <p class="text"><b>No transformer:</b> Removing the temporal transformer causes performance to collapse, highlighting that causal sequence modeling is indispensable for partially observable environments.</p>
+            </li>
+            <li>
+                <p class="text"><b>No next-step shift:</b> Training to match the current-step embedding (rather than predicting the next-step target) results in nearly complete loss of gains &mdash; demonstrating the need for temporal prediction.</p>
+            </li>
+            <li>
+                <p class="text"><b>No projector:</b> Removing the lightweight projection head leads to only a minor reduction in asymptotic performance &mdash; the projector aids optimization but is not fundamental to the gains.</p>
+            </li>
+        </ul>
+    </div>
+
+    <div class="container blog extra-large gray">
+        <img src="static/figures/dmlab_ablation_comparison.png">
+        <p class="caption">
+            <b>Mechanism on DMLab Rooms: predictive sequence modeling is the key.</b> Under matched compute and model capacity (50M environment steps; 5 seeds), removing the causal temporal transformer or the next-step target shift substantially reduces performance. Removing the lightweight projector mainly affects optimization speed/stability, with smaller impact on final returns.
+        </p>
+    </div>
+
+    <!-- Representation Diagnostics -->
+    <div class="container blog main">
+        <h2>Representation Diagnostics</h2>
+        <p class="text">
+            We train a post-hoc pixel decoder to reconstruct observations from frozen latent representations (not used during agent training). NE-Dreamer's latent representations preserve object identity, spatial layout, and task-relevant features consistently across time. In contrast, decoder-based Dreamer and decoder-free R2-Dreamer exhibit temporal inconsistency, where task-specific attributes appear transiently and then fade.
+        </p>
+    </div>
+
+    <div class="container blog large gray">
+        <img src="static/figures/progress_from_reconstruction.png" style="max-width: 900px; margin: 0 auto;">
+        <p class="caption" style="max-width: 900px; margin: 0 auto;">
+            <b>Post-hoc decoder reconstruction reveals temporal consistency.</b> Rows show ground-truth observations (GT) and reconstructions from a post-hoc decoder trained on frozen latents. NE-Dreamer preserves task-relevant objects and spatial layout consistently over time (green circles), while same-timestep methods (Dreamer, R2-Dreamer) exhibit temporal inconsistency where task-specific attributes appear transiently and then fade (red circles).
+        </p>
+    </div>
+
+    <!-- Conclusion -->
+    <div class="container blog main">
+        <h1>Conclusion</h1>
+        <p class="text">
+            We presented NE-Dreamer, a decoder-free Dreamer-style agent that learns world-model representations by predicting and aligning the <em>next</em> encoder embedding using a causal temporal transformer. NE-Dreamer improves long-horizon memory/navigation in DeepMind Lab Rooms while matching strong baselines on the DeepMind Control Suite, and ablations attribute these gains to predictive sequence modeling (causal transformer and next-step target shift), not reconstruction.
+        </p>
+    </div>
+
+    <!-- Citation -->
+    <div class="container blog main">
+        <h1>Citation</h1>
+<pre><code class="plaintext">@inproceedings{bredis2026nedreamer,
+    title={Next Embedding Prediction Makes World Models Stronger},
+    author={George Bredis and Nikita Balagansky and Daniil Gavrilov and Ruslan Rakhimov},
+    year={2026}
+}</code></pre>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>
+                This website is built on the <a href="https://shikun.io/projects/clarity">Clarity Template</a>, designed by <a href="https://shikun.io/">Shikun Liu</a>.
+            </p>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+    <script src="clarity/clarity.js"></script>
+    <script src="assets/scripts/main.js"></script>
+</body>
+</html>
