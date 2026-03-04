@@ -1,0 +1,28 @@
+# DeepMind Lab environment configuration
+task: 'dmlab_rooms_collect_good_objects_train'
+steps: 5e7
+size: [64, 64]
+action_repeat: 4
+env_num: 16
+eval_episode_num: 8
+train_ratio: 32
+encoder:
+  mlp_keys: '$^'
+  cnn_keys: 'image'
+decoder:
+  mlp_keys: '$^'
+  cnn_keys: 'image'
+time_limit: 3600  # DMLab episodes are typically longer
+seed: ${seed}
+vectorized: False
+device: ${device}
+
+# DMLab-specific settings
+action_set: 'default'  # Options: 'default', 'medium', 'small'
+mode: 'train'  # Options: 'train', 'test'
+
+# Path to DMLab runfiles directory (contains level data)
+# If null, will try DMLAB_RUNFILES_PATH environment variable
+# Typically set automatically after building DMLab from source
+runfiles_path: null
+

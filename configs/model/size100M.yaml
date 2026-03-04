@@ -1,0 +1,10 @@
+defaults:
+  - _base_
+
+deter: 6144
+hidden: 768
+discrete: 48
+depth: 48
+units: 768
+act: 'SiLU'
+norm: True

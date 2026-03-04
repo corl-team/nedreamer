@@ -1,0 +1,19 @@
+# DeepMind Lab requirements
+# Note: DeepMind Lab needs to be built from source using Bazel.
+# See: https://github.com/deepmind/lab/blob/master/docs/users/build.md
+#
+# Build instructions:
+# 1. Clone the repo: git clone https://github.com/deepmind/lab.git
+# 2. Install Bazel: https://bazel.build/install
+# 3. Build: bazel build -c opt //python/pip_package:build_pip_package
+# 4. Create wheel: ./bazel-bin/python/pip_package/build_pip_package /tmp/dmlab_pkg
+# 5. Install: pip install /tmp/dmlab_pkg/deepmind_lab-*.whl
+
+# Core dependencies (also in requirements.txt)
+numpy>=1.20.0
+gym>=0.21.0
+torch>=1.11.0
+
+# Additional dependencies for DMLab
+six>=1.12.0
+
