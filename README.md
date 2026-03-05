@@ -142,8 +142,19 @@ If you use NE-Dreamer in your research, please cite:
 
 ## License
 
-This project is licensed under the CC0-1.0 license.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 
-This work builds upon the Dreamer family of model-based RL agents and the R2-Dreamer codebase. We thank the authors of these works for their valuable contributions to the field.
+
+**R2-Dreamer**: This codebase is based on the R2-Dreamer implementation. The original R2-Dreamer repository is available at [https://github.com/NM512/r2dreamer](https://github.com/NM512/r2dreamer). If you use this codebase, please don't forget to give kudos to original R2-Dreamer repo.  We thank the authors of these works for their valuable contributions to the field.
+
+```bibtex
+@inproceedings{morihirar2,
+  title={R2-Dreamer: Redundancy-Reduced World Models without Decoders or Augmentation},
+  author={Morihira, Naoki and Nahar, Amal and Bharadwaj, Kartik and Kato, Yasuhiro and Hayashi, Akinobu and Harada, Tatsuya},
+  booktitle={The Fourteenth International Conference on Learning Representations}
+}
+```
+
+**Dreamer**: This work builds upon the foundational Dreamer family of model-based reinforcement learning agents (Dreamer, DreamerV2, DreamerV3), which have made enormous contributions to the field of world model learning and model-based RL.
